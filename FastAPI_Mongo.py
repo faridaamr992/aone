@@ -2,9 +2,18 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from pymongo import MongoClient
 from typing import List
+from dotenv import load_dotenv
+import os
+
+load_dotenv()  
+
+MONGO_URI = os.getenv("MONGO_URI")
+
+if not MONGO_URI:
+    raise ValueError("MONGO_URI environment variable not set")
 
 # Connect to MongoDB
-client = MongoClient("mongodb://localhost:27017")
+client = MongoClient(MONGO_URI)
 db = client.user_db
 collection = db.users
 
@@ -27,7 +36,7 @@ def user_helper(user) -> dict:
 from pymongo import MongoClient
 from bson import ObjectId
 
-client = MongoClient("mongodb://localhost:27017")
+client = MongoClient(MONGO_URI)
 db = client.user_db
 collection = db.users
 
