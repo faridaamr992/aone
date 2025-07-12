@@ -1,13 +1,10 @@
-from fastapi import APIRouter, HTTPException
-from typing import List
+from fastapi import HTTPException
+from typing import List, Optional
 from bson import ObjectId
-from database import db, to_object_id
+from core.database import db, to_object_id
 from models.category import CategoryModel, CategoryCreateModel, CategoryUpdateModel
 
-router = APIRouter()
-
-@router.post("/create_category", response_model=CategoryModel)
-async def create_category(category: CategoryCreateModel):
+async def create_category_controller(category: CategoryCreateModel) -> CategoryModel:
     try:
         existing = await db.categories.find_one({"name": category.name})
         if existing:
@@ -20,9 +17,7 @@ async def create_category(category: CategoryCreateModel):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"create category: {str(e)}")
 
-
-@router.get("/get_categories", response_model=List[CategoryModel])
-async def get_categories():
+async def get_categories_controller() -> List[CategoryModel]:
     try:
         categories = []
         async for cat in db.categories.find():
@@ -32,9 +27,7 @@ async def get_categories():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"get categories: {str(e)}")
 
-
-@router.get("/get_category/{category_id}", response_model=CategoryModel)
-async def get_category(category_id: str):
+async def get_category_controller(category_id: str) -> CategoryModel:
     try:
         obj_id = to_object_id(category_id)
         if not obj_id:
@@ -43,14 +36,13 @@ async def get_category(category_id: str):
         category = await db.categories.find_one({"_id": obj_id})
         if not category:
             raise HTTPException(status_code=404, detail="Category not found")
+
         category["_id"] = str(category["_id"])
         return CategoryModel(**category)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"get category: {str(e)}")
 
-
-@router.put("/update_category/{category_id}")
-async def update_category(category_id: str, data: CategoryUpdateModel):
+async def update_category_controller(category_id: str, data: CategoryUpdateModel) -> dict:
     try:
         obj_id = to_object_id(category_id)
         if not obj_id:
@@ -64,9 +56,7 @@ async def update_category(category_id: str, data: CategoryUpdateModel):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"update category: {str(e)}")
 
-
-@router.delete("/delete_category/{category_id}")
-async def delete_category(category_id: str):
+async def delete_category_controller(category_id: str) -> dict:
     try:
         obj_id = to_object_id(category_id)
         if not obj_id:

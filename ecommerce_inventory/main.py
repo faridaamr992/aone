@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from routes import product_routes, category_routes, order_routes
+from views import product_routes, category_routes, order_routes
 
 app = FastAPI(title="E-commerce Inventory API")
 

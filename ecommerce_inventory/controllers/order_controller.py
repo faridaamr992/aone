@@ -1,32 +1,24 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import HTTPException
 from bson import ObjectId
-from database import db, to_object_id
+from core.database import db, to_object_id
 from models.order import OrderModel, OrderCreateModel, OrderUpdateModel
-from typing import List
 
-router = APIRouter()
-
-@router.post("/create_order", response_model=OrderModel)
-async def create_order(order: OrderCreateModel):
+async def create_order_logic(order: OrderCreateModel):
     try:
-        # Lookup product by name
         product = await db.products.find_one({"name": order.product_name})
         if not product:
             raise HTTPException(status_code=404, detail="Product not found")
 
-        # Check stock
         if product.get("stock", 0) < order.quantity:
             raise HTTPException(status_code=400, detail="Insufficient stock")
 
-        # Create order
         new_order = {
-            "product_id": str(product["_id"]),  # still stored as string
+            "product_id": str(product["_id"]),
             "quantity": order.quantity,
             "status": order.status or "pending"
         }
         result = await db.orders.insert_one(new_order)
 
-        # Decrease stock
         await db.products.update_one(
             {"_id": product["_id"]},
             {"$inc": {"stock": -order.quantity}}
@@ -37,8 +29,7 @@ async def create_order(order: OrderCreateModel):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"create order: {str(e)}")
 
-@router.get("/get_orders", response_model=List[OrderModel])
-async def get_orders():
+async def get_all_orders_logic():
     try:
         orders = []
         async for order in db.orders.find():
@@ -48,9 +39,7 @@ async def get_orders():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"get orders: {str(e)}")
 
-
-@router.get("/get_order/{order_id}", response_model=OrderModel)
-async def get_order(order_id: str):
+async def get_order_logic(order_id: str):
     try:
         obj_id = to_object_id(order_id)
         if not obj_id:
@@ -64,9 +53,7 @@ async def get_order(order_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"get order: {str(e)}")
 
-
-@router.put("/update_order/{order_id}")
-async def update_order(order_id: str, data: OrderUpdateModel):
+async def update_order_logic(order_id: str, data: OrderUpdateModel):
     try:
         obj_id = to_object_id(order_id)
         if not obj_id:
@@ -75,7 +62,6 @@ async def update_order(order_id: str, data: OrderUpdateModel):
         update_data = data.dict(exclude_unset=True)
 
         if "product_id" in update_data:
-            # Validate new product_id exists
             if not await db.products.find_one({"_id": ObjectId(update_data["product_id"])}):
                 raise HTTPException(status_code=404, detail="Product not found")
 
@@ -86,9 +72,7 @@ async def update_order(order_id: str, data: OrderUpdateModel):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"update order: {str(e)}")
 
-
-@router.delete("/delete_order/{order_id}")
-async def delete_order(order_id: str):
+async def delete_order_logic(order_id: str):
     try:
         obj_id = to_object_id(order_id)
         if not obj_id:
